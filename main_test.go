@@ -28,4 +28,13 @@ func TestNativeCallWithContextParameter(t *testing.T) {
 	if ret != valueTrue {
 		t.Fatal(ret)
 	}
+
+	ctx = context.WithValue(context.Background(), "a", "c")
+	ret, err = vm.RunString(ctx, `f()`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ret != valueFalse {
+		t.Fatal(ret)
+	}
 }

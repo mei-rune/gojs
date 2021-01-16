@@ -32,32 +32,31 @@ func (r *Runtime) RunProgram(ctx context.Context, p *goja.Program) (goja.Value, 
 	return r.Runtime.RunProgram(p)
 }
 
-func (r *Runtime) Set(name string, value interface{}) {
+func (r *Runtime) convertValue(value interface{}) interface{} {
 	switch i := value.(type) {
 	case func(context.Context, goja.FunctionCall) goja.Value:
-		r.Runtime.Set(name, func(call goja.FunctionCall) goja.Value {
+		return func(call goja.FunctionCall) goja.Value {
 			return i(r.ctx, call)
-		})
+		}
 	case func(context.Context, goja.ConstructorCall) *goja.Object:
-		r.Runtime.Set(name, func(call goja.ConstructorCall) *goja.Object {
+		return func(call goja.ConstructorCall) *goja.Object {
 			return i(r.ctx, call)
-		})
+		}
+	case map[string]interface{}:
+		newValues := make(map[string]interface{}, len(i))
+		for k, v := range i {
+			newValues[k] = r.convertValue(v)
+		}
+		return newValues
 	default:
-		r.Runtime.Set(name, value)
+		return value
 	}
 }
 
+func (r *Runtime) Set(name string, value interface{}) {
+	r.Runtime.Set(name, r.convertValue(value))
+}
+
 func (r *Runtime) ToValue(i interface{}) goja.Value {
-	switch i := i.(type) {
-	case func(context.Context, goja.FunctionCall) goja.Value:
-		return r.Runtime.ToValue(func(call goja.FunctionCall) goja.Value {
-			return i(r.ctx, call)
-		})
-	case func(context.Context, goja.ConstructorCall) *goja.Object:
-		return r.Runtime.ToValue(func(call goja.ConstructorCall) *goja.Object {
-			return i(r.ctx, call)
-		})
-	default:
-		return r.Runtime.ToValue(i)
-	}
+	return r.Runtime.ToValue(r.convertValue(i))
 }
