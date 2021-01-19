@@ -116,11 +116,11 @@ func (FieldNameMapper) MethodName(t reflect.Type, m reflect.Method) string { ret
 
 // Bind the provided value v to the provided runtime
 func (r *Runtime) Bind(name string, v interface{}) {
-	exports := r.bind(v)
+	exports := r.ToBindObject(v)
 	r.Runtime.Set(name, exports)
 }
 
-func (r *Runtime) bind(v interface{}) map[string]interface{} {
+func (r *Runtime) ToBindObject(v interface{}) map[string]interface{} {
 	exports := make(map[string]interface{})
 
 	val := reflect.ValueOf(v)
@@ -185,7 +185,7 @@ func (r *Runtime) bind(v interface{}) map[string]interface{} {
 							arg := call.Arguments[i+j-reservedArgs]
 							v := reflect.New(emT)
 							if err := r.Runtime.ExportTo(arg, v.Interface()); err != nil {
-								Throw(r.Runtime, err)
+								Throw(r, err)
 							}
 							varArgs.Index(j).Set(v.Elem())
 						}
@@ -208,7 +208,7 @@ func (r *Runtime) bind(v interface{}) map[string]interface{} {
 					// Allocate a T* and export the JS value to it.
 					v := reflect.New(T)
 					if err := r.Runtime.ExportTo(arg, v.Interface()); err != nil {
-						Throw(r.Runtime, err)
+						Throw(r, err)
 					}
 					args[i] = v.Elem()
 				}
@@ -222,7 +222,7 @@ func (r *Runtime) bind(v interface{}) map[string]interface{} {
 
 				if len(ret) > 0 {
 					if hasError && !ret[1].IsNil() {
-						Throw(r.Runtime, ret[1].Interface().(error))
+						Throw(r, ret[1].Interface().(error))
 					}
 					return r.Runtime.ToValue(ret[0].Interface())
 				}
@@ -256,12 +256,4 @@ func (r *Runtime) bind(v interface{}) map[string]interface{} {
 	}
 
 	return exports
-}
-
-// Throws a JS error; avoids re-wrapping GoErrors.
-func Throw(rt *goja.Runtime, err error) {
-	if e, ok := err.(*goja.Exception); ok {
-		panic(e)
-	}
-	panic(rt.NewGoError(err))
 }

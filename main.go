@@ -6,6 +6,30 @@ import (
 	"github.com/dop251/goja"
 )
 
+type runtimeCtxKey struct{}
+
+func (key *runtimeCtxKey) String() string {
+	return "js-runtime"
+}
+
+var (
+	ctxKeyRuntime = &runtimeCtxKey{}
+)
+
+// WithRuntime attaches the given goja runtime to the context.
+func WithRuntime(ctx context.Context, rt *Runtime) context.Context {
+	return context.WithValue(ctx, ctxKeyRuntime, rt)
+}
+
+// GetRuntime retrieves the attached goja runtime from the given context.
+func GetRuntime(ctx context.Context) *Runtime {
+	v := ctx.Value(ctxKeyRuntime)
+	if v == nil {
+		return nil
+	}
+	return v.(*Runtime)
+}
+
 func New() *Runtime {
 	return &Runtime{
 		Runtime: goja.New(),
@@ -18,17 +42,17 @@ type Runtime struct {
 }
 
 func (r *Runtime) RunString(ctx context.Context, str string) (goja.Value, error) {
-	r.ctx = ctx
+	r.ctx = WithRuntime(ctx, r)
 	return r.Runtime.RunString(str)
 }
 
 func (r *Runtime) RunScript(ctx context.Context, name, src string) (goja.Value, error) {
-	r.ctx = ctx
+	r.ctx = WithRuntime(ctx, r)
 	return r.Runtime.RunScript(name, src)
 }
 
 func (r *Runtime) RunProgram(ctx context.Context, p *goja.Program) (goja.Value, error) {
-	r.ctx = ctx
+	r.ctx = WithRuntime(ctx, r)
 	return r.Runtime.RunProgram(p)
 }
 
