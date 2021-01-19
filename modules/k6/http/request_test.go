@@ -42,8 +42,8 @@ import (
 	"github.com/klauspost/compress/zstd"
 	"github.com/mccutchen/go-httpbin/httpbin"
 	"github.com/oxtoacart/bpool"
-	"github.com/sirupsen/logrus"
-	logtest "github.com/sirupsen/logrus/hooks/test"
+	"github.com/runner-mei/log"
+	"github.com/runner-mei/log/logtest"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	null "gopkg.in/guregu/null.v3"
@@ -225,8 +225,12 @@ func TestRequestAndBatch(t *testing.T) {
 			assert.NoError(t, err)
 
 			t.Run("Unset Max", func(t *testing.T) {
-				hook := logtest.NewLocal(state.Logger)
-				defer hook.Reset()
+				oldLogger := state.Logger
+				defer func() {
+					state.Logger = oldLogger
+				}()
+				var observedLogs *logtest.ObservedLogs
+				state.Logger, observedLogs = logtest.NewObservedLogger()
 
 				oldOpts := state.Options
 				defer func() { state.Options = oldOpts }()
@@ -240,11 +244,11 @@ func TestRequestAndBatch(t *testing.T) {
 				`))
 				assert.NoError(t, err)
 
-				logEntry := hook.LastEntry()
-				if assert.NotNil(t, logEntry) {
-					assert.Equal(t, logrus.WarnLevel, logEntry.Level)
-					assert.Equal(t, sr("HTTPBIN_URL/redirect/11"), logEntry.Data["url"])
-					assert.Equal(t, "Stopped after 11 redirects and returned the redirection; pass { redirects: n } in request params or set global maxRedirects to silence this", logEntry.Message)
+				exists, logEntry := logtest.LastEntry(observedLogs)
+				if assert.True(t, exists) {
+					assert.Equal(t, log.WarnLevel, logEntry.Level)
+					assert.Equal(t, sr("HTTPBIN_URL/redirect/11"), logEntry.ContextMap()["url"])
+					assert.Equal(t, "Stopped after redirects and returned the redirection; pass { redirects: n } in request params or set global maxRedirects to silence this", logEntry.Message)
 				}
 			})
 		})
@@ -292,8 +296,12 @@ func TestRequestAndBatch(t *testing.T) {
 			assert.NoError(t, err)
 		})
 		t.Run("10s", func(t *testing.T) {
-			hook := logtest.NewLocal(state.Logger)
-			defer hook.Reset()
+			oldLogger := state.Logger
+			defer func() {
+				state.Logger = oldLogger
+			}()
+			var observedLogs *logtest.ObservedLogs
+			state.Logger, observedLogs = logtest.NewObservedLogger()
 
 			startTime := time.Now()
 			_, err := rt.RunString(ctx, sr(`
@@ -306,12 +314,16 @@ func TestRequestAndBatch(t *testing.T) {
 			assert.Contains(t, err.Error(), "context deadline exceeded")
 			assert.WithinDuration(t, startTime.Add(1*time.Second), endTime, 2*time.Second)
 
-			logEntry := hook.LastEntry()
-			assert.Nil(t, logEntry)
+			exists, _ := logtest.LastEntry(observedLogs)
+			assert.True(t, exists)
 		})
 		t.Run("10s", func(t *testing.T) {
-			hook := logtest.NewLocal(state.Logger)
-			defer hook.Reset()
+			oldLogger := state.Logger
+			defer func() {
+				state.Logger = oldLogger
+			}()
+			var observedLogs *logtest.ObservedLogs
+			state.Logger, observedLogs = logtest.NewObservedLogger()
 
 			startTime := time.Now()
 			_, err := rt.RunString(ctx, sr(`
@@ -324,8 +336,8 @@ func TestRequestAndBatch(t *testing.T) {
 			assert.Contains(t, err.Error(), "context deadline exceeded")
 			assert.WithinDuration(t, startTime.Add(1*time.Second), endTime, 2*time.Second)
 
-			logEntry := hook.LastEntry()
-			assert.Nil(t, logEntry)
+			exists, _ := logtest.LastEntry(observedLogs)
+			assert.True(t, exists)
 		})
 	})
 	t.Run("UserAgent", func(t *testing.T) {
@@ -484,15 +496,21 @@ func TestRequestAndBatch(t *testing.T) {
 		})
 	})
 	t.Run("Cancelled", func(t *testing.T) {
-		hook := logtest.NewLocal(state.Logger)
-		defer hook.Reset()
+		oldLogger := state.Logger
+		defer func() {
+			state.Logger = oldLogger
+		}()
+		var observedLogs *logtest.ObservedLogs
+		state.Logger, observedLogs = logtest.NewObservedLogger()
 
 		newctx, cancel := context.WithCancel(ctx)
 		cancel()
 
 		_, err := rt.RunString(newctx, sr(`http.get("HTTPBIN_URL/get/");`))
 		assert.Error(t, err)
-		assert.Nil(t, hook.LastEntry())
+
+		exists, _ := logtest.LastEntry(observedLogs)
+		assert.True(t, exists)
 	})
 	t.Run("HTTP/2", func(t *testing.T) {
 		stats.GetBufferedSamples(samples) // Clean up buffered samples from previous tests
@@ -563,19 +581,27 @@ func TestRequestAndBatch(t *testing.T) {
 		})
 	})
 	t.Run("Invalid", func(t *testing.T) {
-		hook := logtest.NewLocal(state.Logger)
-		defer hook.Reset()
+		oldLogger := state.Logger
+		defer func() {
+			state.Logger = oldLogger
+		}()
+		var observedLogs *logtest.ObservedLogs
+		state.Logger, observedLogs = logtest.NewObservedLogger()
 
 		_, err := rt.RunString(ctx, `http.request("", "");`)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unsupported protocol scheme")
 
-		logEntry := hook.LastEntry()
-		assert.Nil(t, logEntry)
+		exists, _ := logtest.LastEntry(observedLogs)
+		assert.False(t, exists)
 
 		t.Run("throw=false", func(t *testing.T) {
-			hook := logtest.NewLocal(state.Logger)
-			defer hook.Reset()
+			oldLogger := state.Logger
+			defer func() {
+				state.Logger = oldLogger
+			}()
+			var observedLogs *logtest.ObservedLogs
+			state.Logger, observedLogs = logtest.NewObservedLogger()
 
 			_, err := rt.RunString(ctx, `
 				var res = http.request("GET", "some://example.com", null, { throw: false });
@@ -587,10 +613,10 @@ func TestRequestAndBatch(t *testing.T) {
 			require.Error(t, err)
 			assert.Contains(t, err.Error(), "another error")
 
-			logEntry := hook.LastEntry()
-			if assert.NotNil(t, logEntry) {
-				assert.Equal(t, logrus.WarnLevel, logEntry.Level)
-				assert.Contains(t, logEntry.Data["error"].(error).Error(), "unsupported protocol scheme")
+			exists, logEntry := logtest.LastEntry(observedLogs)
+			if assert.True(t, exists) {
+				assert.Equal(t, log.WarnLevel, logEntry.Level)
+				assert.Contains(t, logEntry.ContextMap()["error"].(error).Error(), "unsupported protocol scheme")
 				assert.Equal(t, "Request Failed", logEntry.Message)
 			}
 		})
@@ -1456,8 +1482,8 @@ func TestRequestCompression(t *testing.T) {
 	defer tb.Cleanup()
 	ctx := context.Background()
 
-	logHook := testutils.SimpleLogrusHook{HookedLevels: []logrus.Level{logrus.WarnLevel}}
-	state.Logger.AddHook(&logHook)
+	var observedLogs *logtest.ObservedLogs
+	state.Logger, observedLogs = logtest.NewObservedLogger()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -1578,7 +1604,7 @@ func TestRequestCompression(t *testing.T) {
 		expectedEncoding = "not, valid"
 		actualEncoding = "gzip, deflate"
 
-		logHook.Drain()
+		observedLogs.TakeAll()
 		t.Run("encoding", func(t *testing.T) {
 			_, err := runES6String(t, ctx, rt, tb.Replacer.Replace(`
 				http.post("HTTPBIN_URL/compressed-text", `+"`"+text+"`"+`,
@@ -1588,7 +1614,7 @@ func TestRequestCompression(t *testing.T) {
 				);
 			`))
 			require.NoError(t, err)
-			require.NotEmpty(t, logHook.Drain())
+			require.NotEmpty(t, observedLogs.TakeAll())
 		})
 
 		t.Run("encoding and length", func(t *testing.T) {
@@ -1601,7 +1627,7 @@ func TestRequestCompression(t *testing.T) {
 				);
 			`))
 			require.NoError(t, err)
-			require.NotEmpty(t, logHook.Drain())
+			require.NotEmpty(t, observedLogs.TakeAll())
 		})
 
 		expectedEncoding = actualEncoding
@@ -1614,7 +1640,7 @@ func TestRequestCompression(t *testing.T) {
 				);
 			`))
 			require.NoError(t, err)
-			require.Empty(t, logHook.Drain())
+			require.Empty(t, observedLogs.TakeAll())
 		})
 
 		// TODO: move to some other test?
@@ -1623,7 +1649,7 @@ func TestRequestCompression(t *testing.T) {
 				`http.post("HTTPBIN_URL/post", "0123456789", { "headers": {"Content-Length": "10"}});`,
 			))
 			require.NoError(t, err)
-			require.Empty(t, logHook.Drain())
+			require.Empty(t, observedLogs.TakeAll())
 		})
 
 		t.Run("content-length is set", func(t *testing.T) {
@@ -1634,7 +1660,7 @@ func TestRequestCompression(t *testing.T) {
 				}
 			`))
 			require.NoError(t, err)
-			require.Empty(t, logHook.Drain())
+			require.Empty(t, observedLogs.TakeAll())
 		})
 	})
 }

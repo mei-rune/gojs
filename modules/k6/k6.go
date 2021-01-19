@@ -23,17 +23,13 @@ package k6
 import (
 	"context"
 	"math/rand"
-	"sync/atomic"
 	"time"
 
 	"github.com/dop251/goja"
 	"github.com/pkg/errors"
 
 	"github.com/runner-mei/gojs"
-	"github.com/runner-mei/gojs/js/internal/modules"
-	"github.com/runner-mei/gojs/lib"
-	"github.com/runner-mei/gojs/lib/metrics"
-	"github.com/runner-mei/gojs/stats"
+	"github.com/runner-mei/gojs/modules/k6/internal/modules"
 )
 
 func init() {
@@ -72,119 +68,119 @@ func (*K6) RandomSeed(ctx context.Context, seed int64) {
 	rt.SetRandSource(randSource)
 }
 
-func (*K6) Group(ctx context.Context, name string, fn goja.Callable) (goja.Value, error) {
-	state := lib.GetState(ctx)
-	if state == nil {
-		return nil, ErrGroupInInitContext
-	}
+// func (*K6) Group(ctx context.Context, name string, fn goja.Callable) (goja.Value, error) {
+// 	state := lib.GetState(ctx)
+// 	if state == nil {
+// 		return nil, ErrGroupInInitContext
+// 	}
 
-	if fn == nil {
-		return nil, errors.New("group() requires a callback as a second argument")
-	}
+// 	if fn == nil {
+// 		return nil, errors.New("group() requires a callback as a second argument")
+// 	}
 
-	g, err := state.Group.Group(name)
-	if err != nil {
-		return goja.Undefined(), err
-	}
+// 	g, err := state.Group.Group(name)
+// 	if err != nil {
+// 		return goja.Undefined(), err
+// 	}
 
-	old := state.Group
-	state.Group = g
+// 	old := state.Group
+// 	state.Group = g
 
-	shouldUpdateTag := state.Options.SystemTags.Has(stats.TagGroup)
-	if shouldUpdateTag {
-		state.Tags["group"] = g.Path
-	}
-	defer func() {
-		state.Group = old
-		if shouldUpdateTag {
-			state.Tags["group"] = old.Path
-		}
-	}()
+// 	shouldUpdateTag := state.Options.SystemTags.Has(stats.TagGroup)
+// 	if shouldUpdateTag {
+// 		state.Tags["group"] = g.Path
+// 	}
+// 	defer func() {
+// 		state.Group = old
+// 		if shouldUpdateTag {
+// 			state.Tags["group"] = old.Path
+// 		}
+// 	}()
 
-	startTime := time.Now()
-	ret, err := fn(goja.Undefined())
-	t := time.Now()
+// 	startTime := time.Now()
+// 	ret, err := fn(goja.Undefined())
+// 	t := time.Now()
 
-	tags := state.CloneTags()
-	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
-		Time:   t,
-		Metric: metrics.GroupDuration,
-		Tags:   stats.IntoSampleTags(&tags),
-		Value:  stats.D(t.Sub(startTime)),
-	})
+// 	tags := state.CloneTags()
+// 	stats.PushIfNotDone(ctx, state.Samples, stats.Sample{
+// 		Time:   t,
+// 		Metric: metrics.GroupDuration,
+// 		Tags:   stats.IntoSampleTags(&tags),
+// 		Value:  stats.D(t.Sub(startTime)),
+// 	})
 
-	return ret, err
-}
+// 	return ret, err
+// }
 
-func (*K6) Check(ctx context.Context, arg0, checks goja.Value, extras ...goja.Value) (bool, error) {
-	state := lib.GetState(ctx)
-	if state == nil {
-		return false, ErrCheckInInitContext
-	}
-	rt := gojs.GetRuntime(ctx)
-	t := time.Now()
+// func (*K6) Check(ctx context.Context, arg0, checks goja.Value, extras ...goja.Value) (bool, error) {
+// 	state := lib.GetState(ctx)
+// 	if state == nil {
+// 		return false, ErrCheckInInitContext
+// 	}
+// 	rt := gojs.GetRuntime(ctx)
+// 	t := time.Now()
 
-	// Prepare the metric tags
-	commonTags := state.CloneTags()
-	if len(extras) > 0 {
-		obj := extras[0].ToObject(rt)
-		for _, k := range obj.Keys() {
-			commonTags[k] = obj.Get(k).String()
-		}
-	}
+// 	// Prepare the metric tags
+// 	commonTags := state.CloneTags()
+// 	if len(extras) > 0 {
+// 		obj := extras[0].ToObject(rt.Runtime)
+// 		for _, k := range obj.Keys() {
+// 			commonTags[k] = obj.Get(k).String()
+// 		}
+// 	}
 
-	succ := true
-	var exc error
-	obj := checks.ToObject(rt)
-	for _, name := range obj.Keys() {
-		val := obj.Get(name)
+// 	succ := true
+// 	var exc error
+// 	obj := checks.ToObject(rt.Runtime)
+// 	for _, name := range obj.Keys() {
+// 		val := obj.Get(name)
 
-		tags := make(map[string]string, len(commonTags))
-		for k, v := range commonTags {
-			tags[k] = v
-		}
+// 		tags := make(map[string]string, len(commonTags))
+// 		for k, v := range commonTags {
+// 			tags[k] = v
+// 		}
 
-		// Resolve the check record.
-		check, err := state.Group.Check(name)
-		if err != nil {
-			return false, err
-		}
-		if state.Options.SystemTags.Has(stats.TagCheck) {
-			tags["check"] = check.Name
-		}
+// 		// Resolve the check record.
+// 		check, err := state.Group.Check(name)
+// 		if err != nil {
+// 			return false, err
+// 		}
+// 		if state.Options.SystemTags.Has(stats.TagCheck) {
+// 			tags["check"] = check.Name
+// 		}
 
-		// Resolve callables into values.
-		fn, ok := goja.AssertFunction(val)
-		if ok {
-			tmpVal, err := fn(goja.Undefined(), arg0)
-			val = tmpVal
-			if err != nil {
-				val = rt.ToValue(false)
-				exc = err
-			}
-		}
+// 		// Resolve callables into values.
+// 		fn, ok := goja.AssertFunction(val)
+// 		if ok {
+// 			tmpVal, err := fn(goja.Undefined(), arg0)
+// 			val = tmpVal
+// 			if err != nil {
+// 				val = rt.ToValue(false)
+// 				exc = err
+// 			}
+// 		}
 
-		sampleTags := stats.IntoSampleTags(&tags)
+// 		sampleTags := stats.IntoSampleTags(&tags)
 
-		// Emit! (But only if we have a valid context.)
-		select {
-		case <-ctx.Done():
-		default:
-			if val.ToBoolean() {
-				atomic.AddInt64(&check.Passes, 1)
-				stats.PushIfNotDone(ctx, state.Samples, stats.Sample{Time: t, Metric: metrics.Checks, Tags: sampleTags, Value: 1})
-			} else {
-				atomic.AddInt64(&check.Fails, 1)
-				stats.PushIfNotDone(ctx, state.Samples, stats.Sample{Time: t, Metric: metrics.Checks, Tags: sampleTags, Value: 0})
-				// A single failure makes the return value false.
-				succ = false
-			}
-		}
+// 		// Emit! (But only if we have a valid context.)
+// 		select {
+// 		case <-ctx.Done():
+// 		default:
+// 			if val.ToBoolean() {
+// 				atomic.AddInt64(&check.Passes, 1)
+// 				stats.PushIfNotDone(ctx, state.Samples, stats.Sample{Time: t, Metric: metrics.Checks, Tags: sampleTags, Value: 1})
+// 			} else {
+// 				atomic.AddInt64(&check.Fails, 1)
+// 				stats.PushIfNotDone(ctx, state.Samples, stats.Sample{Time: t, Metric: metrics.Checks, Tags: sampleTags, Value: 0})
+// 				// A single failure makes the return value false.
+// 				succ = false
+// 			}
+// 		}
 
-		if exc != nil {
-			return succ, exc
-		}
-	}
+// 		if exc != nil {
+// 			return succ, exc
+// 		}
+// 	}
 
-	return succ, nil
-}
+// 	return succ, nil
+// }

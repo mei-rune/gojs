@@ -21,6 +21,7 @@
 package metrics
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -34,6 +35,9 @@ import (
 
 func TestMetrics(t *testing.T) {
 	t.Parallel()
+
+	ctx := context.Background()
+
 	types := map[string]stats.MetricType{
 		"Counter": stats.Counter,
 		"Gauge":   stats.Gauge,
@@ -61,14 +65,16 @@ func TestMetrics(t *testing.T) {
 					rt.SetFieldNameMapper(gojs.FieldNameMapper{})
 					rt.Bind("metrics", New())
 
-					root, _ := lib.NewGroup("", nil)
-					child, _ := root.Group("child")
+					// root, _ := lib.NewGroup("", nil)
+					// child, _ := root.Group("child")
 					samples := make(chan stats.SampleContainer, 1000)
 					state := &lib.State{
 						Options: lib.Options{SystemTags: stats.NewSystemTagSet(stats.TagGroup)},
-						Group:   root,
+						// Group:   root,
 						Samples: samples,
-						Tags:    map[string]string{"group": root.Path},
+						Tags:    map[string]string{
+							// "group": root.Path,
+						},
 					}
 
 					isTimeString := ""
@@ -83,63 +89,63 @@ func TestMetrics(t *testing.T) {
 					}
 
 					t.Run("ExitInit", func(t *testing.T) {
-						*ctxPtr = lib.WithState(*ctxPtr, state)
-						_, err := rt.RunString(ctx, fmt.Sprintf(`new metrics.%s("my_metric")`, fn))
+						newctx := lib.WithState(ctx, state)
+						_, err := rt.RunString(newctx, fmt.Sprintf(`new metrics.%s("my_metric")`, fn))
 						assert.EqualError(t, err, "GoError: metrics must be declared in the init context at apply (native)")
 					})
 
-					groups := map[string]*lib.Group{
-						"Root":  root,
-						"Child": child,
-					}
-					for name, g := range groups {
-						name, g := name, g
-						t.Run(name, func(t *testing.T) {
-							state.Group = g
-							state.Tags["group"] = g.Path
-							for name, val := range values {
-								t.Run(name, func(t *testing.T) {
-									t.Run("Simple", func(t *testing.T) {
-										_, err := rt.RunString(ctx, fmt.Sprintf(`m.add(%v)`, val.JS))
-										assert.NoError(t, err)
-										bufSamples := stats.GetBufferedSamples(samples)
-										if assert.Len(t, bufSamples, 1) {
-											sample, ok := bufSamples[0].(stats.Sample)
-											require.True(t, ok)
+					// groups := map[string]*lib.Group{
+					// 	"Root":  root,
+					// 	"Child": child,
+					// }
+					// for name, g := range groups {
+					// 	name, g := name, g
+					t.Run("Root", func(t *testing.T) {
+						// state.Group = g
+						//state.Tags["group"] = g.Path
+						for name, val := range values {
+							t.Run(name, func(t *testing.T) {
+								t.Run("Simple", func(t *testing.T) {
+									_, err := rt.RunString(ctx, fmt.Sprintf(`m.add(%v)`, val.JS))
+									assert.NoError(t, err)
+									bufSamples := stats.GetBufferedSamples(samples)
+									if assert.Len(t, bufSamples, 1) {
+										sample, ok := bufSamples[0].(stats.Sample)
+										require.True(t, ok)
 
-											assert.NotZero(t, sample.Time)
-											assert.Equal(t, sample.Value, val.Float)
-											assert.Equal(t, map[string]string{
-												"group": g.Path,
-											}, sample.Tags.CloneTags())
-											assert.Equal(t, "my_metric", sample.Metric.Name)
-											assert.Equal(t, mtyp, sample.Metric.Type)
-											assert.Equal(t, valueType, sample.Metric.Contains)
-										}
-									})
-									t.Run("Tags", func(t *testing.T) {
-										_, err := rt.RunString(ctx, fmt.Sprintf(`m.add(%v, {a:1})`, val.JS))
-										assert.NoError(t, err)
-										bufSamples := stats.GetBufferedSamples(samples)
-										if assert.Len(t, bufSamples, 1) {
-											sample, ok := bufSamples[0].(stats.Sample)
-											require.True(t, ok)
-
-											assert.NotZero(t, sample.Time)
-											assert.Equal(t, sample.Value, val.Float)
-											assert.Equal(t, map[string]string{
-												"group": g.Path,
-												"a":     "1",
-											}, sample.Tags.CloneTags())
-											assert.Equal(t, "my_metric", sample.Metric.Name)
-											assert.Equal(t, mtyp, sample.Metric.Type)
-											assert.Equal(t, valueType, sample.Metric.Contains)
-										}
-									})
+										assert.NotZero(t, sample.Time)
+										assert.Equal(t, sample.Value, val.Float)
+										assert.Equal(t, map[string]string{
+											//"group": g.Path,
+										}, sample.Tags.CloneTags())
+										assert.Equal(t, "my_metric", sample.Metric.Name)
+										assert.Equal(t, mtyp, sample.Metric.Type)
+										assert.Equal(t, valueType, sample.Metric.Contains)
+									}
 								})
-							}
-						})
-					}
+								t.Run("Tags", func(t *testing.T) {
+									_, err := rt.RunString(ctx, fmt.Sprintf(`m.add(%v, {a:1})`, val.JS))
+									assert.NoError(t, err)
+									bufSamples := stats.GetBufferedSamples(samples)
+									if assert.Len(t, bufSamples, 1) {
+										sample, ok := bufSamples[0].(stats.Sample)
+										require.True(t, ok)
+
+										assert.NotZero(t, sample.Time)
+										assert.Equal(t, sample.Value, val.Float)
+										assert.Equal(t, map[string]string{
+											//"group": g.Path,
+											"a": "1",
+										}, sample.Tags.CloneTags())
+										assert.Equal(t, "my_metric", sample.Metric.Name)
+										assert.Equal(t, mtyp, sample.Metric.Type)
+										assert.Equal(t, valueType, sample.Metric.Contains)
+									}
+								})
+							})
+						}
+					})
+					//}
 				})
 			}
 		})

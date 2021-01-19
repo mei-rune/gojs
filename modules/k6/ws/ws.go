@@ -114,7 +114,7 @@ func (*WS) Connect(ctx context.Context, url string, args ...goja.Value) (*WSHTTP
 
 	// Parse the optional second argument (params)
 	if !goja.IsUndefined(paramsV) && !goja.IsNull(paramsV) {
-		params := paramsV.ToObject(rt)
+		params := paramsV.ToObject(rt.Runtime)
 		for _, k := range params.Keys() {
 			switch k {
 			case "headers":
@@ -123,7 +123,7 @@ func (*WS) Connect(ctx context.Context, url string, args ...goja.Value) (*WSHTTP
 				if goja.IsUndefined(headersV) || goja.IsNull(headersV) {
 					continue
 				}
-				headersObj := headersV.ToObject(rt)
+				headersObj := headersV.ToObject(rt.Runtime)
 				if headersObj == nil {
 					continue
 				}
@@ -135,7 +135,7 @@ func (*WS) Connect(ctx context.Context, url string, args ...goja.Value) (*WSHTTP
 				if goja.IsUndefined(tagsV) || goja.IsNull(tagsV) {
 					continue
 				}
-				tagObj := tagsV.ToObject(rt)
+				tagObj := tagsV.ToObject(rt.Runtime)
 				if tagObj == nil {
 					continue
 				}

@@ -33,6 +33,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/metrics"
 	"github.com/runner-mei/gojs/lib/testutils/httpmultibin"
@@ -92,14 +93,14 @@ func TestSession(t *testing.T) {
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
 
-	root, err := lib.NewGroup("", nil)
-	assert.NoError(t, err)
+	// root, err := lib.NewGroup("", nil)
+	// assert.NoError(t, err)
 
 	rt := gojs.New()
 	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
 	samples := make(chan stats.SampleContainer, 1000)
 	state := &lib.State{
-		Group:  root,
+		// Group:  root,
 		Dialer: tb.Dialer,
 		Options: lib.Options{
 			SystemTags: stats.NewSystemTagSet(
@@ -351,14 +352,14 @@ func TestErrors(t *testing.T) {
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
 
-	root, err := lib.NewGroup("", nil)
-	assert.NoError(t, err)
+	// root, err := lib.NewGroup("", nil)
+	// assert.NoError(t, err)
 
 	rt := gojs.New()
 	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
 	samples := make(chan stats.SampleContainer, 1000)
 	state := &lib.State{
-		Group:  root,
+		// Group:  root,
 		Dialer: tb.Dialer,
 		Options: lib.Options{
 			SystemTags: &stats.DefaultSystemTagSet,
@@ -459,8 +460,8 @@ func TestSystemTags(t *testing.T) {
 
 	sr := tb.Replacer.Replace
 
-	root, err := lib.NewGroup("", nil)
-	assert.NoError(t, err)
+	// root, err := lib.NewGroup("", nil)
+	// assert.NoError(t, err)
 
 	rt := gojs.New()
 	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
@@ -471,7 +472,7 @@ func TestSystemTags(t *testing.T) {
 
 	samples := make(chan stats.SampleContainer, 1000)
 	state := &lib.State{
-		Group:     root,
+		// Group:     root,
 		Dialer:    tb.Dialer,
 		Options:   lib.Options{SystemTags: stats.ToSystemTagSet(testedSystemTags)},
 		Samples:   samples,
@@ -515,8 +516,8 @@ func TestSystemTags(t *testing.T) {
 }
 
 func TestTLSConfig(t *testing.T) {
-	root, err := lib.NewGroup("", nil)
-	assert.NoError(t, err)
+	// root, err := lib.NewGroup("", nil)
+	// assert.NoError(t, err)
 
 	tb := httpmultibin.NewHTTPMultiBin(t)
 	defer tb.Cleanup()
@@ -527,7 +528,7 @@ func TestTLSConfig(t *testing.T) {
 	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
 	samples := make(chan stats.SampleContainer, 1000)
 	state := &lib.State{
-		Group:  root,
+		// Group:  root,
 		Dialer: tb.Dialer,
 		Options: lib.Options{
 			SystemTags: stats.NewSystemTagSet(
