@@ -28,6 +28,7 @@ import (
 
 	"github.com/dop251/goja"
 
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib/netext/httpext"
 	"github.com/runner-mei/gojs/modules/k6/html"
 )
@@ -87,7 +88,7 @@ func (res *Response) SubmitForm(args ...goja.Value) (*Response, error) {
 	var fields map[string]goja.Value
 	requestParams := goja.Null()
 	if len(args) > 0 {
-		params := args[0].ToObject(rt)
+		params := args[0].ToObject(rt.Runtime)
 		for _, k := range params.Keys() {
 			switch k {
 			case "formSelector":
@@ -171,7 +172,7 @@ func (res *Response) ClickLink(args ...goja.Value) (*Response, error) {
 	selector := "a[href]"
 	requestParams := goja.Null()
 	if len(args) > 0 {
-		params := args[0].ToObject(rt)
+		params := args[0].ToObject(rt.Runtime)
 		for _, k := range params.Keys() {
 			switch k {
 			case "selector":

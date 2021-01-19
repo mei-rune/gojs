@@ -21,8 +21,10 @@
 package http
 
 import (
+	"context"
 	"testing"
 
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib/netext/httpext"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,6 +34,7 @@ func TestTagURL(t *testing.T) {
 	rt := gojs.New()
 	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
 	rt.Bind("http", New())
+	ctx := context.Background()
 
 	testdata := map[string]struct{ u, n string }{
 		`http://localhost/anything/`:               {"http://localhost/anything/", "http://localhost/anything/"},
@@ -45,7 +48,7 @@ func TestTagURL(t *testing.T) {
 		t.Run("expr="+expr, func(t *testing.T) {
 			tag, err := httpext.NewURL(data.u, data.n)
 			require.NoError(t, err)
-			v, err := runES6String(t, rt, "http.url`"+expr+"`")
+			v, err := runES6String(t, ctx, rt, "http.url`"+expr+"`")
 			if assert.NoError(t, err) {
 				assert.Equal(t, tag, v.Export())
 			}

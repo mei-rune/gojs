@@ -33,9 +33,11 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/netext/httpext"
 	"github.com/runner-mei/gojs/lib/types"
+	null "gopkg.in/guregu/null.v3"
 )
 
 // ErrHTTPForbiddenInInitContext is used when a http requests was made in the init context
@@ -242,7 +244,7 @@ func (h *HTTP) parseRequest(
 
 	// TODO: ditch goja.Value, reflections and Object and use a simple go map and type assertions?
 	if params != nil && !goja.IsUndefined(params) && !goja.IsNull(params) {
-		params := params.ToObject(rt)
+		params := params.ToObject(rt.Runtime)
 		for _, k := range params.Keys() {
 			switch k {
 			case "cookies":
@@ -250,7 +252,7 @@ func (h *HTTP) parseRequest(
 				if goja.IsUndefined(cookiesV) || goja.IsNull(cookiesV) {
 					continue
 				}
-				cookies := cookiesV.ToObject(rt)
+				cookies := cookiesV.ToObject(rt.Runtime)
 				if cookies == nil {
 					continue
 				}
@@ -262,7 +264,7 @@ func (h *HTTP) parseRequest(
 					switch cookieV.ExportType() {
 					case reflect.TypeOf(map[string]interface{}{}):
 						result.Cookies[key] = &httpext.HTTPRequestCookie{Name: key, Value: "", Replace: false}
-						cookie := cookieV.ToObject(rt)
+						cookie := cookieV.ToObject(rt.Runtime)
 						for _, attr := range cookie.Keys() {
 							switch strings.ToLower(attr) {
 							case "replace":
@@ -280,7 +282,7 @@ func (h *HTTP) parseRequest(
 				if goja.IsUndefined(headersV) || goja.IsNull(headersV) {
 					continue
 				}
-				headers := headersV.ToObject(rt)
+				headers := headersV.ToObject(rt.Runtime)
 				if headers == nil {
 					continue
 				}
@@ -323,7 +325,7 @@ func (h *HTTP) parseRequest(
 				if goja.IsUndefined(tagsV) || goja.IsNull(tagsV) {
 					continue
 				}
-				tagObj := tagsV.ToObject(rt)
+				tagObj := tagsV.ToObject(rt.Runtime)
 				if tagObj == nil {
 					continue
 				}

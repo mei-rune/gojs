@@ -28,9 +28,9 @@ import (
 	"time"
 
 	"github.com/dop251/goja"
-
-	opts
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
+	"github.com/runner-mei/gojs/modules/k6/internal/modules"
 	"github.com/runner-mei/gojs/stats"
 )
 

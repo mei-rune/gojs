@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/stats"
 )

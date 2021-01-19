@@ -46,7 +46,9 @@ import (
 	logtest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	null "gopkg.in/guregu/null.v3"
 
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/js/compiler"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/metrics"
@@ -56,7 +58,7 @@ import (
 )
 
 // runES6String Runs an ES6 string in the given runtime. Use this rather than writing ES5 in tests.
-func runES6String(tb testing.TB, rt *gojs.Runtime, src string) (goja.Value, error) {
+func runES6String(tb testing.TB, ctx context.Context, rt *gojs.Runtime, src string) (goja.Value, error) {
 	var err error
 	c := compiler.New(testutils.NewLogger(tb)) // TODO drop it ? maybe we will drop babel and this will be less needed
 	src, _, err = c.Transform(src, "__string__")
@@ -68,12 +70,13 @@ func runES6String(tb testing.TB, rt *gojs.Runtime, src string) (goja.Value, erro
 }
 
 func TestRunES6String(t *testing.T) {
+	ctx := context.Background()
 	t.Run("Valid", func(t *testing.T) {
-		_, err := runES6String(t, gojs.New(), `let a = 1;`)
+		_, err := runES6String(t, ctx, gojs.New(), `let a = 1;`)
 		assert.NoError(t, err)
 	})
 	t.Run("Invalid", func(t *testing.T) {
-		_, err := runES6String(t, gojs.New(), `let a = #;`)
+		_, err := runES6String(t, ctx, gojs.New(), `let a = #;`)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "SyntaxError: __string__: Unexpected character '#' (1:8)\n> 1 | let a = #;\n")
 	})
@@ -133,9 +136,9 @@ func newRuntime(
 ) (*httpmultibin.HTTPMultiBin, *lib.State, chan stats.SampleContainer, *gojs.Runtime, context.Context) {
 	tb := httpmultibin.NewHTTPMultiBin(t)
 
-	root, err := lib.NewGroup("", nil)
-	require.NoError(t, err)
-	logger := logtest.NewLogger(t)
+	// root, err := lib.NewGroup("", nil)
+	// require.NoError(t, err)
+	logger := testutils.NewLogger(t)
 
 	rt := gojs.New()
 	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
@@ -152,14 +155,14 @@ func newRuntime(
 	samples := make(chan stats.SampleContainer, 1000)
 
 	state := &lib.State{
-		Options:   options,
-		Logger:    logger,
-		Group:     root,
+		Options: options,
+		Logger:  logger,
+		//Group:     root,
 		TLSConfig: tb.TLSClientConfig,
 		Transport: tb.HTTPTransport,
 		BPool:     bpool.NewBufferPool(1),
 		Samples:   samples,
-		Tags:      map[string]string{"group": root.Path},
+		Tags:      map[string]string{"group": ""},
 	}
 
 	tb.Context = lib.WithState(tb.Context, state)
@@ -484,13 +487,10 @@ func TestRequestAndBatch(t *testing.T) {
 		hook := logtest.NewLocal(state.Logger)
 		defer hook.Reset()
 
-		oldctx := *ctx
-		newctx, cancel := context.WithCancel(oldctx)
+		newctx, cancel := context.WithCancel(ctx)
 		cancel()
-		*ctx = newctx
-		defer func() { *ctx = oldctx }()
 
-		_, err := rt.RunString(ctx, sr(`http.get("HTTPBIN_URL/get/");`))
+		_, err := rt.RunString(newctx, sr(`http.get("HTTPBIN_URL/get/");`))
 		assert.Error(t, err)
 		assert.Nil(t, hook.LastEntry())
 	})
@@ -1039,7 +1039,7 @@ func TestRequestAndBatch(t *testing.T) {
 			})
 
 			t.Run("name/template", func(t *testing.T) {
-				_, err := runES6String(t, rt, "http.get(http.url`"+sr(`HTTPBIN_URL/anything/${1+1}`)+"`);")
+				_, err := runES6String(t, ctx, rt, "http.get(http.url`"+sr(`HTTPBIN_URL/anything/${1+1}`)+"`);")
 				assert.NoError(t, err)
 				// There's no /anything endpoint in the go-httpbin library we're using, hence the 404,
 				// but it doesn't matter for this test.
@@ -1111,7 +1111,7 @@ func TestRequestAndBatch(t *testing.T) {
 		assertRequestMetricsEmitted(t, stats.GetBufferedSamples(samples), "GET", sr("HTTPBIN_URL/get?a=1&b=2"), "", 200, "")
 
 		t.Run("Tagged", func(t *testing.T) {
-			_, err := runES6String(t, rt, `
+			_, err := runES6String(t, ctx, rt, `
 			var a = "1";
 			var b = "2";
 			var res = http.get(http.url`+"`"+sr(`HTTPBIN_URL/get?a=${a}&b=${b}`)+"`"+`);
@@ -1221,7 +1221,7 @@ func TestRequestAndBatch(t *testing.T) {
 			assertRequestMetricsEmitted(t, bufSamples, "GET", sr("HTTPBIN_IP_URL/"), "", 200, "")
 
 			t.Run("Tagged", func(t *testing.T) {
-				_, err := runES6String(t, rt, sr(`
+				_, err := runES6String(t, ctx, rt, sr(`
 				let fragment = "get";
 				let reqs = [
 					["GET", http.url`+"`"+`HTTPBIN_URL/${fragment}`+"`"+`],
@@ -1255,7 +1255,7 @@ func TestRequestAndBatch(t *testing.T) {
 				assertRequestMetricsEmitted(t, bufSamples, "GET", sr("HTTPBIN_IP_URL/"), "", 200, "")
 
 				t.Run("Tagged", func(t *testing.T) {
-					_, err := runES6String(t, rt, sr(`
+					_, err := runES6String(t, ctx, rt, sr(`
 					let fragment = "get";
 					let reqs = [
 						http.url`+"`"+`HTTPBIN_URL/${fragment}`+"`"+`,
@@ -1415,6 +1415,7 @@ func TestRequestArrayBufferBody(t *testing.T) {
 	tb, _, _, rt, _ := newRuntime(t) //nolint: dogsled
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
+	ctx := context.Background()
 
 	tb.Mux.HandleFunc("/post-arraybuffer", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "POST", r.Method)
@@ -1453,6 +1454,7 @@ func TestRequestCompression(t *testing.T) {
 	t.Parallel()
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	logHook := testutils.SimpleLogrusHook{HookedLevels: []logrus.Level{logrus.WarnLevel}}
 	state.Logger.AddHook(&logHook)
@@ -1560,7 +1562,7 @@ func TestRequestCompression(t *testing.T) {
 			}
 			expectedEncoding = strings.Join(algos, ", ")
 			actualEncoding = expectedEncoding
-			_, err := runES6String(t, rt, tb.Replacer.Replace(`
+			_, err := runES6String(t, ctx, rt, tb.Replacer.Replace(`
 		http.post("HTTPBIN_URL/compressed-text", `+"`"+text+"`"+`,  {"compression": "`+testCase.compression+`"});
 	`))
 			if testCase.expectedError == "" {
@@ -1578,7 +1580,7 @@ func TestRequestCompression(t *testing.T) {
 
 		logHook.Drain()
 		t.Run("encoding", func(t *testing.T) {
-			_, err := runES6String(t, rt, tb.Replacer.Replace(`
+			_, err := runES6String(t, ctx, rt, tb.Replacer.Replace(`
 				http.post("HTTPBIN_URL/compressed-text", `+"`"+text+"`"+`,
 					{"compression": "`+actualEncoding+`",
 					 "headers": {"Content-Encoding": "`+expectedEncoding+`"}
@@ -1590,7 +1592,7 @@ func TestRequestCompression(t *testing.T) {
 		})
 
 		t.Run("encoding and length", func(t *testing.T) {
-			_, err := runES6String(t, rt, tb.Replacer.Replace(`
+			_, err := runES6String(t, ctx, rt, tb.Replacer.Replace(`
 				http.post("HTTPBIN_URL/compressed-text", `+"`"+text+"`"+`,
 					{"compression": "`+actualEncoding+`",
 					 "headers": {"Content-Encoding": "`+expectedEncoding+`",
@@ -1604,7 +1606,7 @@ func TestRequestCompression(t *testing.T) {
 
 		expectedEncoding = actualEncoding
 		t.Run("correct encoding", func(t *testing.T) {
-			_, err := runES6String(t, rt, tb.Replacer.Replace(`
+			_, err := runES6String(t, ctx, rt, tb.Replacer.Replace(`
 				http.post("HTTPBIN_URL/compressed-text", `+"`"+text+"`"+`,
 					{"compression": "`+actualEncoding+`",
 					 "headers": {"Content-Encoding": "`+actualEncoding+`"}
@@ -1641,6 +1643,7 @@ func TestResponseTypes(t *testing.T) {
 	t.Parallel()
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -1772,6 +1775,7 @@ func TestErrorCodes(t *testing.T) {
 	state.Options.Throw = null.BoolFrom(false)
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
+	ctx := context.Background()
 
 	// Handple paths with custom logic
 	tb.Mux.HandleFunc("/no-location-redirect", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -1882,6 +1886,7 @@ func TestResponseWaitingAndReceivingTimings(t *testing.T) {
 	t.Parallel()
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -1925,6 +1930,7 @@ func TestResponseTimingsWhenTimeout(t *testing.T) {
 	t.Parallel()
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	// We expect a failed request
 	state.Options.Throw = null.BoolFrom(false)
@@ -1947,6 +1953,7 @@ func TestNoResponseBodyMangling(t *testing.T) {
 	t.Parallel()
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -1975,6 +1982,7 @@ func TestNoResponseBodyMangling(t *testing.T) {
 func TestRedirectMetricTags(t *testing.T) {
 	tb, _, samples, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	tb.Mux.HandleFunc("/redirect/post", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/get", http.StatusMovedPermanently)
@@ -2020,6 +2028,7 @@ func TestRedirectMetricTags(t *testing.T) {
 func BenchmarkHandlingOfResponseBodies(b *testing.B) {
 	tb, state, samples, rt, _ := newRuntime(b)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	state.BPool = bpool.NewBufferPool(100)
 
@@ -2090,6 +2099,7 @@ func TestErrorsWithDecompression(t *testing.T) {
 	t.Parallel()
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	state.Options.Throw = null.BoolFrom(false)
 
@@ -2116,6 +2126,7 @@ func TestDigestAuthWithBody(t *testing.T) {
 	t.Parallel()
 	tb, state, samples, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	state.Options.Throw = null.BoolFrom(true)
 	state.Options.HTTPDebug = null.StringFrom("full")

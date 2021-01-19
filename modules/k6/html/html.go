@@ -29,7 +29,7 @@ import (
 	"github.com/dop251/goja"
 	"github.com/pkg/errors"
 	"github.com/runner-mei/gojs"
-	"github.com/runner-mei/gojs/js/internal/modules"
+	"github.com/runner-mei/gojs/modules/k6/internal/modules"
 	gohtml "golang.org/x/net/html"
 )
 

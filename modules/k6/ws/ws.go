@@ -36,9 +36,10 @@ import (
 	"github.com/dop251/goja"
 	"github.com/gorilla/websocket"
 
-	"github.com/runner-mei/gojs/js/internal/modules"
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/metrics"
+	"github.com/runner-mei/gojs/modules/k6/internal/modules"
 	"github.com/runner-mei/gojs/stats"
 )
 
@@ -81,7 +82,7 @@ func New() *WS {
 }
 
 func (*WS) Connect(ctx context.Context, url string, args ...goja.Value) (*WSHTTPResponse, error) {
-	rt := js.GetRuntime(ctx)
+	rt := gojs.GetRuntime(ctx)
 	state := lib.GetState(ctx)
 	if state == nil {
 		return nil, ErrWSInInitContext

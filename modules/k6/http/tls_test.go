@@ -23,27 +23,31 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	null "gopkg.in/guregu/null.v3"
 
 	"github.com/runner-mei/gojs/lib"
+	"github.com/runner-mei/gojs/lib/netext"
 )
 
 func TestTLS13Support(t *testing.T) {
 	tb, state, _, rt, _ := newRuntime(t)
 	defer tb.Cleanup()
+	ctx := context.Background()
 
 	tb.Mux.HandleFunc("/tls-version", http.HandlerFunc(func(resp http.ResponseWriter, req *http.Request) {
 		ver := req.TLS.Version
-		fmt.Fprint(resp, lib.SupportedTLSVersionsToString[lib.TLSVersion(ver)])
+		fmt.Fprint(resp, netext.SupportedTLSVersionsToString[netext.TLSVersion(ver)])
 	}))
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
-	state.Options.Apply(lib.Options{TLSVersion: &lib.TLSVersions{Max: lib.TLSVersion13}})
+	state.Options.Apply(lib.Options{TLSVersion: &netext.TLSVersions{Max: netext.TLSVersion13}})
 
 	_, err := rt.RunString(ctx, tb.Replacer.Replace(`
 		var resp = http.get("HTTPSBIN_URL/tls-version");

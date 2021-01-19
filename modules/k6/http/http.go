@@ -23,10 +23,10 @@ package http
 import (
 	"context"
 
-	"github.com/runner-mei/gojs/common"
-	"github.com/runner-mei/gojs/js/internal/modules"
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/netext"
+	"github.com/runner-mei/gojs/modules/k6/internal/modules"
 )
 
 func init() {
@@ -44,7 +44,7 @@ const (
 )
 
 // ErrJarForbiddenInInitContext is used when a cookie jar was made in the init context
-var ErrJarForbiddenInInitContext = common.NewInitContextError("Making cookie jars in the init context is not supported")
+var ErrJarForbiddenInInitContext = gojs.NewInitContextError("Making cookie jars in the init context is not supported")
 
 //nolint: golint
 type HTTP struct {

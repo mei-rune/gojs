@@ -30,6 +30,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/pkg/errors"
+	"github.com/runner-mei/gojs"
 )
 
 // HTTPCookieJar is cookiejar.Jar wrapper to be used in js scripts
@@ -72,7 +73,7 @@ func (j HTTPCookieJar) Set(ctx context.Context, url, name, value string, opts go
 	c := http.Cookie{Name: name, Value: value}
 	paramsV := opts
 	if paramsV != nil && !goja.IsUndefined(paramsV) && !goja.IsNull(paramsV) {
-		params := paramsV.ToObject(rt)
+		params := paramsV.ToObject(rt.Runtime)
 		for _, k := range params.Keys() {
 			switch strings.ToLower(k) {
 			case "path":
