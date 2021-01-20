@@ -36,8 +36,6 @@ import (
 func TestMetrics(t *testing.T) {
 	t.Parallel()
 
-	ctx := context.Background()
-
 	types := map[string]stats.MetricType{
 		"Counter": stats.Counter,
 		"Gauge":   stats.Gauge,
@@ -77,6 +75,7 @@ func TestMetrics(t *testing.T) {
 						},
 					}
 
+					ctx := context.Background()
 					isTimeString := ""
 					if isTime {
 						isTimeString = `, true`
@@ -106,6 +105,7 @@ func TestMetrics(t *testing.T) {
 						for name, val := range values {
 							t.Run(name, func(t *testing.T) {
 								t.Run("Simple", func(t *testing.T) {
+									ctx = lib.WithState(ctx, state)
 									_, err := rt.RunString(ctx, fmt.Sprintf(`m.add(%v)`, val.JS))
 									assert.NoError(t, err)
 									bufSamples := stats.GetBufferedSamples(samples)
