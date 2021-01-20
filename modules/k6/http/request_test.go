@@ -1438,10 +1438,9 @@ func TestRequestAndBatch(t *testing.T) {
 
 func TestRequestArrayBufferBody(t *testing.T) {
 	t.Parallel()
-	tb, _, _, rt, _ := newRuntime(t) //nolint: dogsled
+	tb, _, _, rt, ctx := newRuntime(t) //nolint: dogsled
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
-	ctx := context.Background()
 
 	tb.Mux.HandleFunc("/post-arraybuffer", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		require.Equal(t, "POST", r.Method)
@@ -1478,9 +1477,8 @@ func TestRequestArrayBufferBody(t *testing.T) {
 
 func TestRequestCompression(t *testing.T) {
 	t.Parallel()
-	tb, state, _, rt, _ := newRuntime(t)
+	tb, state, _, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	var observedLogs *logtest.ObservedLogs
 	state.Logger, observedLogs = logtest.NewObservedLogger()
@@ -1667,9 +1665,8 @@ func TestRequestCompression(t *testing.T) {
 
 func TestResponseTypes(t *testing.T) {
 	t.Parallel()
-	tb, state, _, rt, _ := newRuntime(t)
+	tb, state, _, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -1797,11 +1794,10 @@ func checkErrorCode(t testing.TB, tags *stats.SampleTags, code int, msg string) 
 
 func TestErrorCodes(t *testing.T) {
 	t.Parallel()
-	tb, state, samples, rt, _ := newRuntime(t)
+	tb, state, samples, rt, ctx := newRuntime(t)
 	state.Options.Throw = null.BoolFrom(false)
 	defer tb.Cleanup()
 	sr := tb.Replacer.Replace
-	ctx := context.Background()
 
 	// Handple paths with custom logic
 	tb.Mux.HandleFunc("/no-location-redirect", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -1811,6 +1807,13 @@ func TestErrorCodes(t *testing.T) {
 		w.Header().Set("Location", "h\t:/") // \n is forbidden
 		w.WriteHeader(302)
 	}))
+
+	connectionRefusedRedirectMsg := `dial: connection refused`
+	connectionRefusedRedirectCode := 1212
+	if runtime.GOOS == "windows" {
+		connectionRefusedRedirectMsg = `dial: i/o timeout`
+		connectionRefusedRedirectCode = 1211
+	}
 
 	testCases := []struct {
 		name                string
@@ -1871,8 +1874,8 @@ func TestErrorCodes(t *testing.T) {
 			name:              "Connection refused redirect",
 			status:            0,
 			moreSamples:       1,
-			expectedErrorMsg:  `dial: connection refused`,
-			expectedErrorCode: 1212,
+			expectedErrorMsg:  connectionRefusedRedirectMsg,
+			expectedErrorCode: connectionRefusedRedirectCode,
 			script: `
 			var res = http.get("HTTPBIN_URL/redirect-to?url=http%3A%2F%2F127.0.0.1%3A1%2Fpesho");
 			if (res.url != "http://127.0.0.1:1/pesho") { throw new Error("incorrect URL: " + res.url) }`,
@@ -1910,9 +1913,8 @@ func TestErrorCodes(t *testing.T) {
 
 func TestResponseWaitingAndReceivingTimings(t *testing.T) {
 	t.Parallel()
-	tb, state, _, rt, _ := newRuntime(t)
+	tb, state, _, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -1954,9 +1956,8 @@ func TestResponseWaitingAndReceivingTimings(t *testing.T) {
 
 func TestResponseTimingsWhenTimeout(t *testing.T) {
 	t.Parallel()
-	tb, state, _, rt, _ := newRuntime(t)
+	tb, state, _, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	// We expect a failed request
 	state.Options.Throw = null.BoolFrom(false)
@@ -1977,9 +1978,8 @@ func TestResponseTimingsWhenTimeout(t *testing.T) {
 
 func TestNoResponseBodyMangling(t *testing.T) {
 	t.Parallel()
-	tb, state, _, rt, _ := newRuntime(t)
+	tb, state, _, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	// We don't expect any failed requests
 	state.Options.Throw = null.BoolFrom(true)
@@ -2006,9 +2006,8 @@ func TestNoResponseBodyMangling(t *testing.T) {
 }
 
 func TestRedirectMetricTags(t *testing.T) {
-	tb, _, samples, rt, _ := newRuntime(t)
+	tb, _, samples, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	tb.Mux.HandleFunc("/redirect/post", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/get", http.StatusMovedPermanently)
@@ -2052,9 +2051,8 @@ func TestRedirectMetricTags(t *testing.T) {
 }
 
 func BenchmarkHandlingOfResponseBodies(b *testing.B) {
-	tb, state, samples, rt, _ := newRuntime(b)
+	tb, state, samples, rt, ctx := newRuntime(b)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	state.BPool = bpool.NewBufferPool(100)
 
@@ -2123,9 +2121,8 @@ func BenchmarkHandlingOfResponseBodies(b *testing.B) {
 
 func TestErrorsWithDecompression(t *testing.T) {
 	t.Parallel()
-	tb, state, _, rt, _ := newRuntime(t)
+	tb, state, _, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	state.Options.Throw = null.BoolFrom(false)
 
@@ -2150,9 +2147,8 @@ func TestErrorsWithDecompression(t *testing.T) {
 
 func TestDigestAuthWithBody(t *testing.T) {
 	t.Parallel()
-	tb, state, samples, rt, _ := newRuntime(t)
+	tb, state, samples, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
-	ctx := context.Background()
 
 	state.Options.Throw = null.BoolFrom(true)
 	state.Options.HTTPDebug = null.StringFrom("full")

@@ -21,7 +21,6 @@
 package http
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -125,11 +124,10 @@ func invalidJSONHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func TestResponse(t *testing.T) {
-	tb, state, samples, rt, _ := newRuntime(t)
+	tb, state, samples, rt, ctx := newRuntime(t)
 	defer tb.Cleanup()
 	// root := state.Group
 	sr := tb.Replacer.Replace
-	ctx := context.Background()
 
 	tb.Mux.HandleFunc("/myforms/get", myFormHandler)
 	tb.Mux.HandleFunc("/json", jsonHandler)
@@ -170,7 +168,7 @@ func TestResponse(t *testing.T) {
 			if assert.NoError(t, err) {
 				//old := state.Group
 				//state.Group = g
-				state.Tags["group"] = "my group"
+				state.Tags["group"] = "::my group"
 				defer func() {
 					//state.Group = old
 					state.Tags["group"] = ""
