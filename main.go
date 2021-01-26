@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/dop251/goja"
+	"github.com/runner-mei/gojs/js/compiler"
 )
 
 type runtimeCtxKey struct{}
@@ -32,11 +33,13 @@ func GetRuntime(ctx context.Context) *Runtime {
 
 func New() *Runtime {
 	return &Runtime{
-		Runtime: goja.New(),
+		Compiler: compiler.New(),
+		Runtime:  goja.New(),
 	}
 }
 
 type Runtime struct {
+	*compiler.Compiler
 	*goja.Runtime
 	ctx context.Context
 }

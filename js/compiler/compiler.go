@@ -23,6 +23,7 @@
 package compiler
 
 import (
+	"log"
 	"sync"
 	"time"
 
@@ -30,7 +31,6 @@ import (
 	"github.com/dop251/goja"
 	"github.com/dop251/goja/parser"
 	"github.com/mitchellh/mapstructure"
-	"github.com/runner-mei/log"
 )
 
 // CompatibilityMode specifies the JS compatibility mode
@@ -61,13 +61,11 @@ var (
 )
 
 // A Compiler compiles JavaScript source code (ES5.1 or ES6) into a goja.Program
-type Compiler struct {
-	logger log.Logger
-}
+type Compiler struct{}
 
 // New returns a new Compiler
-func New(logger log.Logger) *Compiler {
-	return &Compiler{logger: logger}
+func New() *Compiler {
+	return &Compiler{}
 }
 
 // Transform the given code into ES5
@@ -77,7 +75,7 @@ func (c *Compiler) Transform(src, filename string) (code string, srcmap *SourceM
 		return
 	}
 
-	return b.Transform(c.logger, src, filename)
+	return b.Transform(src, filename)
 }
 
 // Compile the program in the given CompatibilityMode, wrapping it between pre and post code
@@ -133,7 +131,7 @@ func newBabel() (*babel, error) {
 
 // Transform the given code into ES5, while synchronizing to ensure only a single
 // bundle instance / Goja VM is in use at a time.
-func (b *babel) Transform(logger log.Logger, src, filename string) (string, *SourceMap, error) {
+func (b *babel) Transform(src, filename string) (string, *SourceMap, error) {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
 	opts := make(map[string]interface{})
@@ -147,7 +145,7 @@ func (b *babel) Transform(logger log.Logger, src, filename string) (string, *Sou
 	if err != nil {
 		return "", nil, err
 	}
-	logger.Debug("Babel: Transformed", log.Duration("t", time.Since(startTime)))
+	log.Println("Babel: Transformed", time.Since(startTime))
 
 	vO := v.ToObject(b.vm)
 	var code string

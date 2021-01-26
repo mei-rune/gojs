@@ -18,7 +18,7 @@
  *
  */
 
-package lib
+package gojs
 
 import (
 	"fmt"

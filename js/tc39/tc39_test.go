@@ -19,8 +19,8 @@ import (
 	"github.com/dop251/goja"
 	"github.com/dop251/goja/parser"
 	"github.com/runner-mei/gojs/js/compiler"
+	jslib "github.com/runner-mei/gojs/js/lib"
 	"github.com/runner-mei/gojs/lib"
-	jslib "github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/testutils"
 	"github.com/stretchr/testify/assert"
 )

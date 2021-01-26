@@ -29,7 +29,7 @@ import (
 )
 
 func TestThrow(t *testing.T) {
-	rt := goja.New()
+	rt := New()
 	fn1, ok := goja.AssertFunction(rt.ToValue(func() { Throw(rt, errors.New("aaaa")) }))
 	if assert.True(t, ok, "fn1 is invalid") {
 		_, err := fn1(goja.Undefined())
