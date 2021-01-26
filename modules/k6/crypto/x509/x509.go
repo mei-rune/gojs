@@ -33,9 +33,8 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-
-	"github.com/runner-mei/gojs/common"
-	opts
+	"github.com/runner-mei/gojs"
+	"github.com/runner-mei/gojs/modules/k6/internal/modules"
 )
 
 func init() {
@@ -276,5 +275,5 @@ func fingerPrint(parsed *x509.Certificate) []byte {
 }
 
 func throw(ctx context.Context, err error) {
-	gojs.Throw(common.GetRuntime(ctx), err)
+	gojs.Throw(gojs.GetRuntime(ctx), err)
 }

@@ -26,7 +26,6 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 )
 
@@ -57,7 +56,6 @@ func GetInitEnv(ctx context.Context) *InitEnvironment {
 // InitEnvironment contains properties that can be accessed by Go code executed
 // in the k6 init context. It can be accessed by calling common.GetInitEnv().
 type InitEnvironment struct {
-	Logger      logrus.FieldLogger
 	FileSystems map[string]afero.Fs
 	CWD         *url.URL
 	// TODO: add RuntimeOptions and other properties, goja sources, etc.

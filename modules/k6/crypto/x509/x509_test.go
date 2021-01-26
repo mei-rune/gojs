@@ -26,14 +26,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/runner-mei/gojs"
 	"github.com/stretchr/testify/assert"
 )
 
 func makeRuntime() *gojs.Runtime {
 	rt := gojs.New()
-	rt.SetFieldNameMapper(gojs.FieldNameMapper{})
-	ctx := context.Background()
-	ctx = gojs.WithRuntime(ctx, rt)
 	rt.Bind("x509", New())
 	return rt
 }
@@ -142,6 +140,7 @@ func TestParse(t *testing.T) {
 		return
 	}
 	rt := makeRuntime()
+	ctx := context.Background()
 
 	t.Run("DecodeFailure", func(t *testing.T) {
 		_, err := rt.RunString(ctx, `
@@ -570,6 +569,7 @@ func TestGetAltNames(t *testing.T) {
 		return
 	}
 	rt := makeRuntime()
+	ctx := context.Background()
 
 	t.Run("Failure", func(t *testing.T) {
 		_, err := rt.RunString(ctx, `
@@ -604,6 +604,7 @@ func TestGetIssuer(t *testing.T) {
 		return
 	}
 	rt := makeRuntime()
+	ctx := context.Background()
 
 	t.Run("Failure", func(t *testing.T) {
 		_, err := rt.RunString(ctx, `
@@ -636,6 +637,7 @@ func TestGetSubject(t *testing.T) {
 		return
 	}
 	rt := makeRuntime()
+	ctx := context.Background()
 
 	t.Run("Failure", func(t *testing.T) {
 		_, err := rt.RunString(ctx, `

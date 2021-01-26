@@ -60,7 +60,7 @@ import (
 // runES6String Runs an ES6 string in the given runtime. Use this rather than writing ES5 in tests.
 func runES6String(tb testing.TB, ctx context.Context, rt *gojs.Runtime, src string) (goja.Value, error) {
 	var err error
-	c := compiler.New(testutils.NewLogger(tb)) // TODO drop it ? maybe we will drop babel and this will be less needed
+	c := compiler.New() // TODO drop it ? maybe we will drop babel and this will be less needed
 	src, _, err = c.Transform(src, "__string__")
 	if err != nil {
 		return goja.Undefined(), err

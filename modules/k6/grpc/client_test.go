@@ -29,7 +29,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sirupsen/logrus"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -40,6 +39,7 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/grpc_testing"
 
+	"github.com/runner-mei/gojs"
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/lib/metrics"
 	"github.com/runner-mei/gojs/lib/testutils/httpmultibin"
@@ -493,8 +493,7 @@ func TestDebugStat(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			var b bytes.Buffer
-			logger := logrus.New()
-			logger.Out = &b
+			logger, b := testutils.NewBufferLogger()
 
 			debugStat(tt.stat, logger.WithField("source", "test"), "full")
 			assert.Contains(t, b.String(), tt.expected)

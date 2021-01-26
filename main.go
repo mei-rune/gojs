@@ -5,6 +5,7 @@ import (
 
 	"github.com/dop251/goja"
 	"github.com/runner-mei/gojs/js/compiler"
+	jslib "github.com/runner-mei/gojs/js/lib"
 )
 
 type runtimeCtxKey struct{}
@@ -32,25 +33,52 @@ func GetRuntime(ctx context.Context) *Runtime {
 }
 
 func New() *Runtime {
-	return NewWith(nil)
+	r, err := NewWith(nil)
+	if err != nil {
+		panic(err)
+	}
+	return r
 }
 
-func NewWith(opts *RuntimeOptions) *Runtime {
+func NewWith(opts *RuntimeOptions) (*Runtime, error) {
 	if opts == nil {
 		opts = &RuntimeOptions{}
 	}
-	return &Runtime{
-		Options:  opts,
-		Compiler: compiler.New(),
-		Runtime:  goja.New(),
+
+	compatMode, err := ValidateCompatibilityMode(opts.CompatibilityMode)
+	if err != nil {
+		return nil, err
 	}
+
+	rt := &Runtime{
+		CompatibilityMode: compatMode,
+		Compiler:          compiler.New(),
+		Runtime:           goja.New(),
+	}
+	rt.Runtime.SetFieldNameMapper(FieldNameMapper{})
+	rt.Runtime.SetRandSource(NewRandSource())
+	if compatMode == compiler.CompatibilityModeExtended {
+		if _, err := rt.Runtime.RunProgram(jslib.GetCoreJS()); err != nil {
+			return nil, err
+		}
+	}
+
+	rt.Set("__ENV", opts.Env)
+	return rt, nil
 }
 
 type Runtime struct {
-	Options *RuntimeOptions
+	CompatibilityMode compiler.CompatibilityMode
+
 	*compiler.Compiler
 	*goja.Runtime
 	ctx context.Context
+}
+
+// Compile the program in the given CompatibilityMode, wrapping it between pre and post code
+func (r *Runtime) Compile(filename, src, pre, post string,
+	strict bool, compatMode CompatibilityMode) (*goja.Program, string, error) {
+	return r.Compiler.Compile(src, filename, pre, post, strict, r.CompatibilityMode)
 }
 
 func (r *Runtime) RunString(ctx context.Context, str string) (goja.Value, error) {
@@ -95,4 +123,15 @@ func (r *Runtime) Set(name string, value interface{}) {
 
 func (r *Runtime) ToValue(i interface{}) goja.Value {
 	return r.Runtime.ToValue(r.convertValue(i))
+}
+
+// Instantiates the bundle into an existing runtime. Not public because it also messes with a bunch
+// of other things, will potentially thrash data and makes a mess in it if the operation fails.
+func InstantiateEnv(rt *Runtime) *goja.Object {
+	exports := rt.Runtime.NewObject()
+	rt.Runtime.Set("exports", exports)
+	module := rt.Runtime.NewObject()
+	_ = module.Set("exports", exports)
+	rt.Runtime.Set("module", module)
+	return exports
 }

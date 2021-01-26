@@ -26,6 +26,7 @@ import (
 
 	"github.com/runner-mei/log"
 	"github.com/runner-mei/log/logtest"
+	"go.uber.org/zap/zaptest"
 )
 
 // Something that makes the test also be a valid io.Writer, useful for passing it
@@ -47,4 +48,8 @@ func NewTestOutput(t testing.TB) io.Writer {
 // NewLogger Returns new logger that will log to the testing.TB.Logf
 func NewLogger(t testing.TB) log.Logger {
 	return logtest.NewLogger(t)
+}
+
+func NewBufferLogger() (log.Logger, *zaptest.Buffer) {
+	return logtest.NewBufferLogger()
 }

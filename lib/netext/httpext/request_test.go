@@ -32,12 +32,12 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/runner-mei/gojs/lib"
 	"github.com/runner-mei/gojs/stats"
+	"github.com/runner-mei/log/logtest"
 )
 
 type reader func([]byte) (int, error)
@@ -121,8 +121,7 @@ func TestMakeRequestError(t *testing.T) {
 		defer srv.Close()
 		ctx, cancel := context.WithCancel(context.Background())
 		defer cancel()
-		logger := logrus.New()
-		logger.Level = logrus.DebugLevel
+		logger := logtest.NewLogger(t)
 		state := &lib.State{
 			Options:   lib.Options{RunTags: &stats.SampleTags{}},
 			Transport: srv.Client().Transport,
@@ -167,8 +166,7 @@ func TestResponseStatus(t *testing.T) {
 					w.WriteHeader(tc.statusCode)
 				}))
 				defer server.Close()
-				logger := logrus.New()
-				logger.Level = logrus.DebugLevel
+				logger := logtest.NewLogger(t)
 				state := &lib.State{
 					Options:   lib.Options{RunTags: &stats.SampleTags{}},
 					Transport: server.Client().Transport,
@@ -232,8 +230,8 @@ func TestMakeRequestTimeout(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	samples := make(chan stats.SampleContainer, 10)
-	logger := logrus.New()
-	logger.Level = logrus.DebugLevel
+
+	logger := logtest.NewLogger(t)
 	state := &lib.State{
 		Options: lib.Options{
 			RunTags:    &stats.SampleTags{},
