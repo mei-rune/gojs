@@ -32,13 +32,22 @@ func GetRuntime(ctx context.Context) *Runtime {
 }
 
 func New() *Runtime {
+	return NewWith(nil)
+}
+
+func NewWith(opts *RuntimeOptions) *Runtime {
+	if opts == nil {
+		opts = &RuntimeOptions{}
+	}
 	return &Runtime{
+		Options:  opts,
 		Compiler: compiler.New(),
 		Runtime:  goja.New(),
 	}
 }
 
 type Runtime struct {
+	Options *RuntimeOptions
 	*compiler.Compiler
 	*goja.Runtime
 	ctx context.Context
