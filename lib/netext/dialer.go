@@ -21,7 +21,6 @@
 package netext
 
 import (
-	"cn/com/hengwei36/pkg/goutils/errors"
 	"context"
 	"fmt"
 	"net"
@@ -29,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
 	"github.com/runner-mei/gojs/lib/metrics"
 	"github.com/runner-mei/gojs/lib/types"
 	"github.com/runner-mei/gojs/stats"

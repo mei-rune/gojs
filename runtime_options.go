@@ -21,9 +21,6 @@
 package gojs
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/runner-mei/gojs/js/compiler"
 )
 
@@ -37,32 +34,30 @@ const (
 	CompatibilityModeBase = compiler.CompatibilityModeBase
 )
 
+// ValidateCompatibilityMode checks if the provided val is a valid compatibility mode
+func ValidateCompatibilityMode(val string) (CompatibilityMode, error) {
+	return compiler.ValidateCompatibilityMode(val)
+}
+
+type Compiler = compiler.Compiler
+
+func NewCompiler() *Compiler {
+	return compiler.New()
+}
+
 // RuntimeOptions are settings passed onto the goja JS runtime
 type RuntimeOptions struct {
+	// Whether to pass the actual system environment variables to the JS runtime
+	IncludeSystemEnvVars bool `json:"includeSystemEnvVars,omitempty"`
+
 	// JS compatibility mode: "extended" (Goja+Babel+core.js) or "base" (plain Goja)
 	//
 	// TODO: when we resolve https://github.com/loadimpact/k6/issues/883, we probably
 	// should use the CompatibilityMode type directly... but by then, we'd need to have
 	// some way of knowing if the value has been set by the user or if we're using the
 	// default one, so we can handle `k6 run --compatibility-mode=base es6_extended_archive.tar`
-	CompatibilityMode string `json:"compatibilityMode"`
+	CompatibilityMode string `json:"compatibilityMode,omitempty"`
 
 	// Environment variables passed onto the runner
-	Env map[string]string `json:"env"`
-}
-
-// ValidateCompatibilityMode checks if the provided val is a valid compatibility mode
-func ValidateCompatibilityMode(val string) (cm compiler.CompatibilityMode, err error) {
-	if val == "" {
-		return compiler.CompatibilityModeBase, nil
-	}
-	if cm, err = compiler.CompatibilityModeString(val); err != nil {
-		var compatValues []string
-		for _, v := range compiler.CompatibilityModeValues() {
-			compatValues = append(compatValues, v.String())
-		}
-		err = fmt.Errorf(`invalid compatibility mode "%s". Use: "%s"`,
-			val, strings.Join(compatValues, `", "`))
-	}
-	return
+	Env map[string]string `json:"env,omitempty"`
 }

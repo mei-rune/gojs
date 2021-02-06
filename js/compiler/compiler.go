@@ -23,7 +23,9 @@
 package compiler
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +46,22 @@ const (
 	// CompatibilityModeBase is standard goja ES5.1+
 	CompatibilityModeBase
 )
+
+// ValidateCompatibilityMode checks if the provided val is a valid compatibility mode
+func ValidateCompatibilityMode(val string) (cm CompatibilityMode, err error) {
+	if val == "" {
+		return CompatibilityModeBase, nil
+	}
+	if cm, err = CompatibilityModeString(val); err != nil {
+		var compatValues []string
+		for _, v := range CompatibilityModeValues() {
+			compatValues = append(compatValues, v.String())
+		}
+		err = fmt.Errorf(`invalid compatibility mode "%s". Use: "%s"`,
+			val, strings.Join(compatValues, `", "`))
+	}
+	return
+}
 
 var (
 	DefaultOpts = map[string]interface{}{

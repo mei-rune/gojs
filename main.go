@@ -2,6 +2,8 @@ package gojs
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"github.com/dop251/goja"
 	"github.com/runner-mei/gojs/js/compiler"
@@ -45,7 +47,7 @@ func NewWith(opts *RuntimeOptions) (*Runtime, error) {
 		opts = &RuntimeOptions{}
 	}
 
-	compatMode, err := ValidateCompatibilityMode(opts.CompatibilityMode)
+	compatMode, err := compiler.ValidateCompatibilityMode(opts.CompatibilityMode)
 	if err != nil {
 		return nil, err
 	}
@@ -63,8 +65,33 @@ func NewWith(opts *RuntimeOptions) (*Runtime, error) {
 		}
 	}
 
+	if opts.Env == nil {
+		opts.Env = map[string]string{}
+	}
+	if opts.IncludeSystemEnvVars {
+		for key, value := range collectEnv() {
+			opts.Env[key] = value
+		}
+	}
+
 	rt.Set("__ENV", opts.Env)
 	return rt, nil
+}
+
+func parseEnvKeyValue(kv string) (string, string) {
+	if idx := strings.IndexRune(kv, '='); idx != -1 {
+		return kv[:idx], kv[idx+1:]
+	}
+	return kv, ""
+}
+
+func collectEnv() map[string]string {
+	env := make(map[string]string)
+	for _, kv := range os.Environ() {
+		k, v := parseEnvKeyValue(kv)
+		env[k] = v
+	}
+	return env
 }
 
 type Runtime struct {
@@ -75,9 +102,13 @@ type Runtime struct {
 	ctx context.Context
 }
 
+func (r *Runtime) SetContext(ctx context.Context) {
+	r.ctx = ctx
+}
+
 // Compile the program in the given CompatibilityMode, wrapping it between pre and post code
-func (r *Runtime) Compile(filename, src, pre, post string,
-	strict bool, compatMode CompatibilityMode) (*goja.Program, string, error) {
+func (r *Runtime) Compile(src, filename, pre, post string,
+	strict bool) (*goja.Program, string, error) {
 	return r.Compiler.Compile(src, filename, pre, post, strict, r.CompatibilityMode)
 }
 
